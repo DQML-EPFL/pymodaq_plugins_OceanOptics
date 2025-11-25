@@ -27,6 +27,11 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         Once loaded, holds the device that takes the aquisition
     
     """
+
+    params = comon_parameters + [
+        {'title': 'Integration time', 'name': 'integration_time', 'type': 'int', 'value': 10, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': 'ms', 'tip': 'Integration time for spectrum aquisition.\nMIN=1ms, MAX=10000ms'},
+        {'title': 'Scan Averaging', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': ' Scans', 'tip': "Averaging over a certain number of scans. Reduces noise but doesn't increase signal strength."}
+        ]
     
 
     def ini_attributes(self):
@@ -45,9 +50,11 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
         """
-        if param.name() == "a_parameter_you've_added_in_self.params":
-           self.controller.your_method_to_apply_this_param_change()
-
+        if param.name() == "integration_time":
+           self.device.set_integration_time( int( self.settings["integration_time"].value() * 1e3 ) )
+        
+        if param.name() == "scan_average":
+           self.device.set_scans_to_average( self.settings["scan_average"].value() )
 
 
     def ini_detector(self, controller=None):
@@ -86,8 +93,8 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
                     self.id = id
                     self.device = self.controller.open_device(id)
                     serialNumber = self.device.get_serial_number()
-                    self.device.set_scans_to_average(1)             
-                    self.device.set_integration_time(int(1e3))  
+                    self.device.set_scans_to_average( self.settings["scan_average"].value() )             
+                    self.device.set_integration_time( int( self.settings["integration_time"].value() * 1e3 ) )  
                            
 
                     print("API Version  : %d.%d.%d " % (major, minor, point))
@@ -128,8 +135,8 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
         spectrum = np.array( self.device.get_formatted_spectrum() )
         self.dte_signal.emit(DataToExport('Spectrum',
-                                          data=[DataFromPlugins(name='Spectrul', data=spectrum,
-                                                                dim='Data1D', labels=['dat0', 'data1'],
+                                          data=[DataFromPlugins(name='Spectrum', data=spectrum,
+                                                                dim='Data1D', labels=['dat0', 'Spectrum'],
                                                                 axes=[self.x_axis])]))
 
 
