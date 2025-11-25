@@ -7,20 +7,11 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.data import DataFromPlugins
 
-
-class PythonWrapperOfYourInstrument:
-    #  TODO Replace this fake class with the import of the real python wrapper of your instrument
-    pass
-
-# TODO:
-# (1) change the name of the following class to DAQ_1DViewer_TheNameOfYourChoice
-# (2) change the name of this file to daq_1Dviewer_TheNameOfYourChoice ("TheNameOfYourChoice" should be the SAME
-#     for the class name and the file name.)
-# (3) this file should then be put into the right folder, namely IN THE FOLDER OF THE PLUGIN YOU ARE DEVELOPING:
-#     pymodaq_plugins_my_plugin/daq_viewer_plugins/plugins_1D
+from pymodaq_plugins_OceanOptics.hardware.oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
 
 
-class DAQ_1DViewer_Template(DAQ_Viewer_base):
+
+class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
     """ Instrument plugin class for a 1D viewer.
     
     This object inherits all functionalities to communicate with PyMoDAQ’s DAQ_Viewer module through inheritance via
@@ -47,15 +38,19 @@ class DAQ_1DViewer_Template(DAQ_Viewer_base):
         # elements to be added here as dicts in order to control your custom stage
         ############
         ]
+    
 
     def ini_attributes(self):
         #  TODO declare the type of the wrapper (and assign it to self.controller) you're going to use for easy
         #  autocompletion
-        self.controller: PythonWrapperOfYourInstrument = None
+        # self.controller : OceanDirectAPI = OceanDirectAPI()
 
-        # TODO declare here attributes you want/need to init with a default value
+        self.device = None
+        self.device_id = None
 
         self.x_axis = None
+
+
 
     def commit_settings(self, param: Parameter):
         """Apply the consequences of a change of value in the detector settings
@@ -87,38 +82,64 @@ class DAQ_1DViewer_Template(DAQ_Viewer_base):
             False if initialization failed otherwise True
         """
 
-        raise NotImplementedError  # TODO when writing your own plugin remove this line and modify the one below
         if self.is_master:
-            self.controller = PythonWrapperOfYourInstrument()  #instantiate you driver with whatever arguments are needed
-            self.controller.open_communication() # call eventual methods
-            initialized = self.controller.a_method_or_atttribute_to_check_if_init()  # TODO
-        else:
-            self.controller = controller
+            self.controller : OceanDirectAPI = OceanDirectAPI()
+            
+            device_count = self.controller.find_usb_devices()
+            device_ids   = self.controller.get_device_ids()
+
+            device_count = len(device_ids)
+            (major, minor, point) = self.controller.get_api_version_numbers()
+
+            if device_count == 0:
+                print("No device Found")
+                raise RuntimeError 
+            else:
+                for id in device_ids:
+                    self.id = id
+                    self.device = self.controller.open_device(id)
+                    serialNumber = self.device.get_serial_number()
+                    self.device.set_scans_to_average(1)             
+                    self.device.set_integration_time(int(1e3))  
+                           
+
+                    print("API Version  : %d.%d.%d " % (major, minor, point))
+                    print("Total Device : %d     " % device_count)
+                    print("Serial Number: %s     " % serialNumber)
+
+                    print("Scan Averages : ", self.device.get_scans_to_average() )
+                    print("Integration Time : ", self.device.get_integration_time() )
+
+
             initialized = True
 
-        ## TODO for your custom plugin
-        # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
-        data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
-        self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
 
-        # TODO for your custom plugin. Initialize viewers pannel with the future type of data
-        self.dte_signal_temp.emit(DataToExport(name='myplugin',
-                                               data=[DataFromPlugins(name='Mock1',
-                                                                     data=[np.array([0., 0., ...]),
-                                                                           np.array([0., 0., ...])],
-                                                                     dim='Data1D', labels=['Mock1', 'label2'],
-                                                                     axes=[self.x_axis])]))
+        # ## TODO for your custom plugin☺
+        wavel = np.array( self.device.get_wavelengths() )
+        self.x_axis = Axis(data=wavel, label='', units='', index=0)
 
-        info = "Whatever info you want to log"
+        # # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
+        # data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
+        # self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
+
+        # # TODO for your custom plugin. Initialize viewers pannel with the future type of data
+        # self.dte_signal_temp.emit(DataToExport(name='myplugin',
+        #                                        data=[DataFromPlugins(name='Mock1',
+        #                                                              data=[np.array([0., 0., ...]),
+        #                                                                    np.array([0., 0., ...])],
+        #                                                              dim='Data1D', labels=['Mock1', 'label2'],
+        #                                                              axes=[self.x_axis])]))
+
+        info = "Success I think"
         return info, initialized
+
+
 
     def close(self):
         """Terminate the communication protocol"""
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        if self.is_master:
-            #  self.controller.your_method_to_terminate_the_communication()  # when writing your own plugin replace this line
-            ...
+        self.cooller.close_device(self.id)
+
+
 
     def grab_data(self, Naverage=1, **kwargs):
         """Start a grab from the detector
@@ -131,18 +152,17 @@ class DAQ_1DViewer_Template(DAQ_Viewer_base):
         kwargs: dict
             others optionals arguments
         """
-        ## TODO for your custom plugin: you should choose EITHER the synchrone or the asynchrone version following
 
         ##synchrone version (blocking function)
-        data_tot = self.controller.your_method_to_start_a_grab_snap()
-        self.dte_signal.emit(DataToExport('myplugin',
-                                          data=[DataFromPlugins(name='Mock1', data=data_tot,
+        spectrum = np.array( self.device.get_formatted_spectrum() )
+        self.dte_signal.emit(DataToExport('Spectrum',
+                                          data=[DataFromPlugins(name='Spectrul', data=spectrum,
                                                                 dim='Data1D', labels=['dat0', 'data1'],
                                                                 axes=[self.x_axis])]))
 
-        ##asynchrone version (non-blocking function with callback)
-        self.controller.your_method_to_start_a_grab_snap(self.callback)
-        #########################################################
+        # ##asynchrone version (non-blocking function with callback)
+        # self.controller.your_method_to_start_a_grab_snap(self.callback)
+        # #########################################################
 
 
     def callback(self):
