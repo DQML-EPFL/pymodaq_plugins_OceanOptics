@@ -17,34 +17,19 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
     This object inherits all functionalities to communicate with PyMoDAQ’s DAQ_Viewer module through inheritance via
     DAQ_Viewer_base. It makes a bridge between the DAQ_Viewer module and the Python wrapper of a particular instrument.
 
-    TODO Complete the docstring of your plugin with:
-        * The set of instruments that should be compatible with this instrument plugin.
-        * With which instrument it has actually been tested.
-        * The version of PyMoDAQ during the test.
-        * The version of the operating system.
-        * Installation instructions: what manufacturer’s drivers should be installed to make it run?
-
     Attributes:
     -----------
     controller: object
         The particular object that allow the communication with the hardware, in general a python wrapper around the
          hardware library.
          
-    # TODO add your particular attributes here if any
-
+    Device : object
+        Once loaded, holds the device that takes the aquisition
+    
     """
-    params = comon_parameters+[
-        ## TODO for your custom plugin
-        # elements to be added here as dicts in order to control your custom stage
-        ############
-        ]
     
 
     def ini_attributes(self):
-        #  TODO declare the type of the wrapper (and assign it to self.controller) you're going to use for easy
-        #  autocompletion
-        # self.controller : OceanDirectAPI = OceanDirectAPI()
-
         self.device = None
         self.device_id = None
 
@@ -60,11 +45,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         param: Parameter
             A given parameter (within detector_settings) whose value has been changed by the user
         """
-        ## TODO for your custom plugin
         if param.name() == "a_parameter_you've_added_in_self.params":
            self.controller.your_method_to_apply_this_param_change()
-#        elif ...
-        ##
+
+
 
     def ini_detector(self, controller=None):
         """Detector communication initialization
@@ -83,17 +67,20 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         """
 
         if self.is_master:
+            # Create Controller
             self.controller : OceanDirectAPI = OceanDirectAPI()
             
+            # Find USB devices and IDs
             device_count = self.controller.find_usb_devices()
             device_ids   = self.controller.get_device_ids()
 
             device_count = len(device_ids)
             (major, minor, point) = self.controller.get_api_version_numbers()
 
+            # Load 
             if device_count == 0:
                 print("No device Found")
-                raise RuntimeError 
+                raise RuntimeError(f'No OceanOptics Device Found')
             else:
                 for id in device_ids:
                     self.id = id
@@ -113,22 +100,9 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
             initialized = True
 
-
-        # ## TODO for your custom plugin☺
+        # Create x-axis
         wavel = np.array( self.device.get_wavelengths() )
         self.x_axis = Axis(data=wavel, label='', units='', index=0)
-
-        # # get the x_axis (you may want to to this also in the commit settings if x_axis may have changed
-        # data_x_axis = self.controller.your_method_to_get_the_x_axis()  # if possible
-        # self.x_axis = Axis(data=data_x_axis, label='', units='', index=0)
-
-        # # TODO for your custom plugin. Initialize viewers pannel with the future type of data
-        # self.dte_signal_temp.emit(DataToExport(name='myplugin',
-        #                                        data=[DataFromPlugins(name='Mock1',
-        #                                                              data=[np.array([0., 0., ...]),
-        #                                                                    np.array([0., 0., ...])],
-        #                                                              dim='Data1D', labels=['Mock1', 'label2'],
-        #                                                              axes=[self.x_axis])]))
 
         info = "Success I think"
         return info, initialized
@@ -138,7 +112,6 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
     def close(self):
         """Terminate the communication protocol"""
         self.cooller.close_device(self.id)
-
 
 
     def grab_data(self, Naverage=1, **kwargs):
@@ -153,34 +126,22 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
             others optionals arguments
         """
 
-        ##synchrone version (blocking function)
         spectrum = np.array( self.device.get_formatted_spectrum() )
         self.dte_signal.emit(DataToExport('Spectrum',
                                           data=[DataFromPlugins(name='Spectrul', data=spectrum,
                                                                 dim='Data1D', labels=['dat0', 'data1'],
                                                                 axes=[self.x_axis])]))
 
-        # ##asynchrone version (non-blocking function with callback)
-        # self.controller.your_method_to_start_a_grab_snap(self.callback)
-        # #########################################################
 
 
     def callback(self):
         """optional asynchrone method called when the detector has finished its acquisition of data"""
-        data_tot = self.controller.your_method_to_get_data_from_buffer()
-        self.dte_signal.emit(DataToExport('myplugin',
-                                          data=[DataFromPlugins(name='Mock1', data=data_tot,
-                                                                dim='Data1D', labels=['dat0', 'data1'])]))
+        pass
+
 
     def stop(self):
         """Stop the current grab hardware wise if necessary"""
-        ## TODO for your custom plugin
-        raise NotImplementedError  # when writing your own plugin remove this line
-        self.controller.your_method_to_stop_acquisition()  # when writing your own plugin replace this line
-        self.emit_status(ThreadCommand('Update_Status', ['Some info you want to log']))
-        ##############################
-        return ''
-
+        print("Stop Aquisition")
 
 if __name__ == '__main__':
     main(__file__)
