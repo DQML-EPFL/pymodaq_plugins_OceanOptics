@@ -51,10 +51,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
             A given parameter (within detector_settings) whose value has been changed by the user
         """
         if param.name() == "integration_time":
-           self.device.set_integration_time( int( self.settings["integration_time"].value() * 1e3 ) )
+           self.device.set_integration_time( int( self.settings["integration_time"] * 1e3 ) )
         
         if param.name() == "scan_average":
-           self.device.set_scans_to_average( self.settings["scan_average"].value() )
+           self.device.set_scans_to_average( self.settings["scan_average"] )
 
 
     def ini_detector(self, controller=None):
@@ -93,8 +93,8 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
                     self.id = id
                     self.device = self.controller.open_device(id)
                     serialNumber = self.device.get_serial_number()
-                    self.device.set_scans_to_average( self.settings["scan_average"].value() )             
-                    self.device.set_integration_time( int( self.settings["integration_time"].value() * 1e3 ) )  
+                    self.device.set_scans_to_average( self.settings["scan_average"] )
+                    self.device.set_integration_time( int( self.settings["integration_time"] * 1e3 ) )
                            
 
                     print("API Version  : %d.%d.%d " % (major, minor, point))
