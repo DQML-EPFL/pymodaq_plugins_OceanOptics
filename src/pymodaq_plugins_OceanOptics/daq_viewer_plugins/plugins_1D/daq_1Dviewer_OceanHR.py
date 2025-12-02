@@ -27,10 +27,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         Once loaded, holds the device that takes the aquisition
     
     """
-
+    
     params = comon_parameters + [
         {'title': 'Integration time', 'name': 'integration_time', 'type': 'int', 'value': 10, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': 'ms', 'tip': 'Integration time for spectrum aquisition.\nMIN=1ms, MAX=10000ms'},
-        {'title': 'Scan Averaging', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': ' Scans', 'tip': "Averaging over a certain number of scans. Reduces noise but doesn't increase signal strength."}
+        {'title': 'Averaging', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': ' Trace', 'tip': "Averaging over a certain number of trace. Reduces noise but doesn't increase signal strength."}
         ]
     
 
