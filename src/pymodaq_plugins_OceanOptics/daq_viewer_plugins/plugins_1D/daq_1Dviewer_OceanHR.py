@@ -7,6 +7,8 @@ from pymodaq_gui.parameter import Parameter
 from pymodaq.control_modules.viewer_utility_classes import DAQ_Viewer_base, comon_parameters, main
 from pymodaq.utils.data import DataFromPlugins
 
+from scipy.optimize import curve_fit
+
 from pymodaq_plugins_OceanOptics.hardware.oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
 
 
@@ -27,10 +29,11 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         Once loaded, holds the device that takes the aquisition
     
     """
-    
+
     params = comon_parameters + [
         {'title': 'Integration time', 'name': 'integration_time', 'type': 'int', 'value': 10, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': 'ms', 'tip': 'Integration time for spectrum aquisition.\nMIN=1ms, MAX=10000ms'},
-        {'title': 'Averaging', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 1, 'max': 10000, 'siPrefix': True, 'suffix': ' Trace', 'tip': "Averaging over a certain number of trace. Reduces noise but doesn't increase signal strength."}
+        {'title': 'Averaging', 'name': 'scan_average', 'type': 'int', 'value': 1, 'min': 10, 'max': 10000, 'siPrefix': True, 'suffix': ' Trace', 'tip': "Averaging over a certain number of trace. Reduces noise but doesn't increase signal strength."},
+        {'title': 'Fit', 'name': 'fit', 'type': 'bool', 'value': False, 'tip': "Try to fit the scan."}
         ]
     
 
@@ -134,10 +137,18 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         """
 
         spectrum = np.array( self.device.get_formatted_spectrum() )
-        self.dte_signal.emit(DataToExport('Spectrum',
-                                          data=[DataFromPlugins(name='Spectrum', data=spectrum,
-                                                                dim='Data1D', labels=['dat0', 'Spectrum'],
-                                                                axes=[self.x_axis])]))
+
+        data_to_export = [ DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels=['Trace', 'Spectrum'], axes=[self.x_axis]) ]
+        # Try to fit
+        if self.settings["fit"]: 
+            try:
+                popt, err=fit_trace(self.x_axis.data, spectrum)
+                if err<100:  data_to_export = [ DataFromPlugins(name='Spectrum', data=[spectrum, gaussian(self.x_axis.data, *popt)], dim='Data1D', labels=['Trace', f'Fit : {popt[1]}'], axes=[self.x_axis])]
+
+            except Exception as e: pass
+
+
+        self.dte_signal.emit( DataToExport('Spectrum', data=data_to_export) )
 
 
 
@@ -149,6 +160,20 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
     def stop(self):
         """Stop the current grab hardware wise if necessary"""
         print("Stop Aquisition")
+
+
+
+
+
+
+def fit_trace(wavelen, spectrum):
+    popt, pcov = curve_fit(gaussian, wavelen, spectrum, p0=[ spectrum.max()-spectrum.min(), wavelen[np.argmax(spectrum)], (wavelen[1]-wavelen[0])/5, spectrum.min() ], maxfev=1000)
+    return popt, np.diag(pcov).sum() * np.sqrt(2)
+
+
+def gaussian(x, A, x0, sigma, offset):
+    return A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) + offset
+
 
 if __name__ == '__main__':
     main(__file__)
