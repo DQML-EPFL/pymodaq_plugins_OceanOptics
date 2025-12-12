@@ -54,6 +54,9 @@ requires = [
 ]
 build-backend = "hatchling.build"
 
+[tool.hatch.publish.indexes.testpypi]
+url = "https://test.pypi.org/legacy/"
+
 [tool.hatch.metadata.hooks.custom]
 
 [tool.hatch.version]
