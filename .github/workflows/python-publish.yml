@@ -37,5 +37,6 @@ jobs:
         HATCH_INDEX_USER: ${{ secrets.PYPI_USERNAME }}
         HATCH_INDEX_AUTH: ${{ secrets.PYPI_PASSWORD }}
       run: |
-        twine upload -r testpypi dist/*
         hatch publish
+        twine upload -r testpypi dist/*
+
