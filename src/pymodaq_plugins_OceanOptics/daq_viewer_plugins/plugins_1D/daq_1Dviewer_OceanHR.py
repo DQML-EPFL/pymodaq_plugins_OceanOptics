@@ -9,7 +9,7 @@ from pymodaq.utils.data import DataFromPlugins
 
 from scipy.optimize import curve_fit
 
-from pymodaq_plugins_OceanOptics.hardware.oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
+from oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
 
 
 
@@ -118,12 +118,6 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         return info, initialized
 
 
-
-    def close(self):
-        """Terminate the communication protocol"""
-        self.cooller.close_device(self.id)
-
-
     def grab_data(self, Naverage=1, **kwargs):
         """Start a grab from the detector
 
@@ -138,7 +132,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
         spectrum = np.array( self.device.get_formatted_spectrum() )
 
-        data_to_export = [ DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels=['Trace', 'Spectrum'], axes=[self.x_axis]) ]
+        dwa = DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels=['Trace', 'Spectrum'], axes=[self.x_axis])
+
+        data_to_export = [ dwa ]
+
         # Try to fit
         if self.settings["fit"]: 
             try:
@@ -152,16 +149,9 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
 
 
-    def callback(self):
-        """optional asynchrone method called when the detector has finished its acquisition of data"""
-        pass
-
-
-    def stop(self):
-        """Stop the current grab hardware wise if necessary"""
-        print("Stop Aquisition")
-
-
+    def close(self):
+        """Terminate the communication protocol"""
+        self.controller.close_device(self.id)
 
 
 
