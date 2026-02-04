@@ -6,10 +6,10 @@ h5exporters = false  # true if plugin contains custom h5 file exporters
 scanners = false  # true if plugin contains custom scan layout (daq_scan extensions)
 
 [urls]
-package-url = 'https://github.com/DQML-EPFL/pymodaq_plugins_OceanOptics.git' #todo modify url by your plugin url
+package-url = 'https://github.com/DQML-EPFL/pymodaq_plugins_OceanOptics.git'
 
 [project]
-name = "pymodaq_plugins_OceanOptics" #todo modify template by your plugin short name
+name = "pymodaq_plugins_OceanOptics"
 description = 'Pymodaq Plugin for Ocean Optic Spectrometers'
 dependencies = [
     "pymodaq>=5.0.0",
@@ -53,6 +53,9 @@ requires = [
     "pymodaq_utils>=0.0.6",
 ]
 build-backend = "hatchling.build"
+
+[tool.hatch.publish.indexes.testpypi]
+url = "https://test.pypi.org/legacy/"
 
 [tool.hatch.metadata.hooks.custom]
 
