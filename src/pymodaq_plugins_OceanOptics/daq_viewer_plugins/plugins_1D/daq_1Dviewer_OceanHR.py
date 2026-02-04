@@ -9,8 +9,7 @@ from pymodaq.utils.data import DataFromPlugins
 
 from scipy.optimize import curve_fit
 
-from oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
-
+from pymodaq_plugins_OceanOptics.hardware.OceanView_Wrapper import OceanView_Wrapper
 
 
 class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
@@ -40,8 +39,11 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
     def ini_attributes(self):
         self.device = None
         self.device_id = None
+        self.controller : OceanView_Wrapper = None
 
         self.x_axis = None
+        self.manager = None
+        self.hit_except = None
 
 
 
@@ -78,43 +80,13 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
         if self.is_master:
             # Create Controller
-            self.controller : OceanDirectAPI = OceanDirectAPI()
-            
-            # Find USB devices and IDs
-            device_count = self.controller.find_usb_devices()
-            device_ids   = self.controller.get_device_ids()
+            self.controller = OceanView_Wrapper()
+            initialized = self.controller.initialize_spectro( 
+                                                        n_average           = self.settings["scan_average"],
+                                                        integration_time    = self.settings["integration_time"])
+ 
 
-            device_count = len(device_ids)
-            (major, minor, point) = self.controller.get_api_version_numbers()
-
-            # Load 
-            if device_count == 0:
-                print("No device Found")
-                raise RuntimeError(f'No OceanOptics Device Found')
-            else:
-                for id in device_ids:
-                    self.id = id
-                    self.device = self.controller.open_device(id)
-                    serialNumber = self.device.get_serial_number()
-                    self.device.set_scans_to_average( self.settings["scan_average"] )
-                    self.device.set_integration_time( int( self.settings["integration_time"] * 1e3 ) )
-                           
-
-                    print("API Version  : %d.%d.%d " % (major, minor, point))
-                    print("Total Device : %d     " % device_count)
-                    print("Serial Number: %s     " % serialNumber)
-
-                    print("Scan Averages : ", self.device.get_scans_to_average() )
-                    print("Integration Time : ", self.device.get_integration_time() )
-
-
-            initialized = True
-
-        # Create x-axis
-        wavel = np.array( self.device.get_wavelengths() )
-        self.x_axis = Axis(data=wavel, label='', units='', index=0)
-
-        info = "Success I think"
+        info = "Success"
         return info, initialized
 
 
@@ -130,9 +102,13 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
             others optionals arguments
         """
 
-        spectrum = np.array( self.device.get_formatted_spectrum() )
+        spectrum = self.controller.get_spectrum()
 
-        dwa = DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels=['Trace', 'Spectrum'], axes=[self.x_axis])
+        # Create x-axis
+        self.x_axis = Axis(data=self.controller.get_the_x_axis(), label='Wavelength', units='nm', index=0)
+        
+        # --- Create Pymodaq Data Structure
+        dwa = DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels='Spectrum', axes=[self.x_axis])
 
         data_to_export = [ dwa ]
 
@@ -151,7 +127,7 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 
     def close(self):
         """Terminate the communication protocol"""
-        self.controller.close_device(self.id)
+        self.controller.terminate_the_communication(self.manager, self.hit_except)
 
 
 
@@ -159,7 +135,6 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
 def fit_trace(wavelen, spectrum):
     popt, pcov = curve_fit(gaussian, wavelen, spectrum, p0=[ spectrum.max()-spectrum.min(), wavelen[np.argmax(spectrum)], (wavelen[1]-wavelen[0])/5, spectrum.min() ], maxfev=1000)
     return popt, np.diag(pcov).sum() * np.sqrt(2)
-
 
 def gaussian(x, A, x0, sigma, offset):
     return A * np.exp(-(x - x0) ** 2 / (2 * sigma ** 2)) + offset
