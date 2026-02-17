@@ -56,10 +56,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
             A given parameter (within detector_settings) whose value has been changed by the user
         """
         if param.name() == "integration_time":
-           self.device.set_integration_time( int( self.settings["integration_time"] * 1e3 ) )
+           self.controller.device.set_integration_time( int( self.settings["integration_time"] * 1e3 ) )
         
         if param.name() == "scan_average":
-           self.device.set_scans_to_average( self.settings["scan_average"] )
+           self.controller.device.set_scans_to_average( self.settings["scan_average"] )
 
 
     def ini_detector(self, controller=None):
@@ -105,10 +105,10 @@ class DAQ_1DViewer_OceanHR(DAQ_Viewer_base):
         spectrum = self.controller.get_spectrum()
 
         # Create x-axis
-        self.x_axis = Axis(data=self.controller.get_the_x_axis(), label='Wavelength', units='nm', index=0)
+        self.x_axis = Axis(data=self.controller.get_the_x_axis() * 1e-9, units='m', index=0)
         
-        # --- Create Pymodaq Data Structure
-        dwa = DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', labels='Spectrum', axes=[self.x_axis])
+        # --- Create Pymodaq Data Structure     #TODO: Labels with no error
+        dwa = DataFromPlugins(name='Spectrum', data=spectrum, dim='Data1D', axes=[self.x_axis])
 
         data_to_export = [ dwa ]
 

@@ -8,14 +8,14 @@ Created on Mon Feb 3 2025
 import ctypes
 import numpy as np
 from math import *
-from oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
+from pymodaq_plugins_OceanOptics.hardware.oceandirect.OceanDirectAPI import OceanDirectAPI, OceanDirectError, FeatureID
 
 
 class OceanView_Wrapper:
 
     ############## My methods
 
-    def __init__(self, n_average) -> None:
+    def __init__(self, n_average=1) -> None:
         """
         Max Sampling Freq = 80 MHz
         """
@@ -52,13 +52,15 @@ class OceanView_Wrapper:
                 self.device.set_scans_to_average( n_average )
                 self.device.set_integration_time( int( integration_time * 1e3 ) )
                         
-
+                print("================================================")
+                print("========= Initialize OceanView Spectro =========")
                 print("API Version  : %d.%d.%d " % (major, minor, point))
                 print("Total Device : %d     " % device_count)
                 print("Serial Number: %s     " % serialNumber)
 
                 print("Scan Averages : ", self.device.get_scans_to_average() )
                 print("Integration Time : ", self.device.get_integration_time() )
+                print("================================================")
 
 
         return True
